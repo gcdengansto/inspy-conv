@@ -12,8 +12,11 @@
 ```bash
 pip install inspy-conv
 ```
+> ⚠️ **WARNING**: "pip install inspy" will install another package, which has nothing to do with inelastic neutron scattering. 
 
 ## 📦 Usage
+**REMIND**: After "pip install inspy-conv", one can use this package just using "import inspy", see below:
+
 ```bash
 import inspy
 
