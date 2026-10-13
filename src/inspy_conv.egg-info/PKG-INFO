@@ -1,0 +1,120 @@
+Metadata-Version: 2.4
+Name: inspy-conv
+Version: 0.3.2
+Summary: Toolkit for inelastic neutron scattering resolution calculation and resolution convolution data fitting
+Author-email: Guochu Deng <gc.deng.ansto@gmail.com>
+License-Expression: MIT
+Project-URL: Homepage, https://github.com/gcdengansto/inspy
+Project-URL: Repository, https://github.com/gcdengansto/inspy
+Keywords: neutron,scattering,resolution,spectrometer,triple-axis,time-of-flight
+Classifier: Programming Language :: Python :: 3
+Classifier: Intended Audience :: Science/Research
+Classifier: Topic :: Scientific/Engineering :: Physics
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy>=1.20
+Requires-Dist: matplotlib>=3.5
+Requires-Dist: scipy>=1.7
+Requires-Dist: pandas>=1.3
+Requires-Dist: lmfit>=1.0
+Requires-Dist: h5py>=3.0
+Requires-Dist: plotly>=5.0
+Requires-Dist: QtPy
+Requires-Dist: PySide6
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: flake8; extra == "dev"
+Dynamic: license-file
+
+# inspy-conv
+
+**inspy-conv**, renamed from **inspy** for publishing on PyPI, is a Python toolkit for scientific data analysis and simulation workflows, with a focus on inelastic neutron scattering instrument resolution calculation and related resolution convolution data fitting.
+
+> Install name: `inspy-conv`  
+> Import name: `inspy`
+
+---
+
+## 🚀 Installation
+
+```bash
+pip install inspy-conv
+```
+
+## 📦 Usage
+```bash
+import inspy
+
+# Example usage
+# (replace with real functionality)
+result = inspy.do_something()
+print(result)
+```
+
+## 🎯 Features
+Modular design for scientific workflows
+Lightweight and easy to integrate into existing pipelines
+Designed for extensibility in research environments
+Compatible with NumPy-based data processing
+
+## 📁 Project Structure
+```bash
+inspy-conv/
+├── src/inspy/        # Main package (import inspy)
+├── pyproject.toml    # Build configuration
+├── README.md
+└── LICENSE
+```
+
+## 🔬 Scope
+
+This package is intended for:
+
+> Neutron Scattering Data Analysis
+
+> Instrument Resolution Calculation with Cooper-Nathans, Popovici Methods
+
+> Resolution Convolution Fitting to Inelastic Neutron Scattering Data
+
+> General Inelastic Neutron Scattering Geometric Calculation
+
+> User Friendly GUI for Data Fitting with Convoluting Instrument Resolution
+
+## 🛠️ Development
+
+Repository:
+
+https://github.com/gcdengansto/inspy-conv
+
+
+Install in editable mode:
+```bash
+pip install -e .
+```
+
+## 📖 Documentation
+
+Documentation is under development.
+Usage examples and tutorials can be found at https://github.com/gcdengansto/inspy-conv.
+
+## 🤝 Contributing
+
+Please contact the author for fixing bugs and adding additional functions
+
+
+## 📜 License
+
+This project is licensed under the MIT License — see the LICENSE file for details.
+
+## 👤 Author
+
+Guochu Deng
+
+Email: gc.deng.ansto@gmail.com
+
+## ⚠️ Disclaimer
+
+This software is provided for scientific research purposes.
+No guarantees are made regarding correctness or fitness for a particular application.

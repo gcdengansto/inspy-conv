@@ -1,0 +1,31 @@
+site_name: inspy-conv
+site_description: Neutron scattering resolution calculation and convolution fitting toolkit
+repo_url: https://github.com/gcdengansto/inspy
+repo_name: gcdengansto/inspy
+edit_uri: ""
+
+theme:
+  name: mkdocs
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Quick start: quickstart.md
+  - CLI reference: cli.md
+  - User guide:
+      - Energy: energy.md
+      - Crystallography: crystal.md
+      - Resolution calculation: resolution.md
+      - Convolution fitting: fitting.md
+      - GUIs: gui.md
+  - Developer guide:
+      - Architecture: architecture.md
+      - Development: development.md
+
+markdown_extensions:
+  - tables
+  - admonition
+  - toc:
+      permalink: true
+  - attr_list
+  - md_in_html
