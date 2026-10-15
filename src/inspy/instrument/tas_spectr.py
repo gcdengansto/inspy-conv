@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# This code is modified from reslib 3.4c and neutronpy
+# This code is modified from neutronpy
 
 # Define a TAS instrument for resolution calculations
 

@@ -5,9 +5,7 @@ for **inelastic neutron scattering data analysis**. It provides triple-axis spec
 resolution calculation (Cooper–Nathans / Popovici), resolution-convolution fitting of
 S(Q,ω) models, crystal lattice and space-group tools, and Qt-based interactive GUIs.
 
-The resolution algorithms are a faithful port of **ResLib 3.4c** (A. Zheludev), with
-known issues tracked and fixed incrementally (see `proj_review_output*.md` in the
-repository root).
+The resolution algorithms are the same as **ResLib**, with known issues tracked and fixed incrementally.
 
 ---
 
@@ -179,10 +177,8 @@ pytest tests/
 
 ## References
 
-- A. Zheludev, *ResLib 3.4c* — MATLAB resolution library the TAS engine is ported from
-  (bundled in `ResLib3.4c/` for reference, including `manual.pdf`).
-- G. Granroth / neutronpy conventions — several modules are adapted from
-  *neutronpy* (see file headers).
+- A. Zheludev, *ResLib 3.4c* — MATLAB resolution library the TAS engine.
+- neutronpy conventions — several modules are adapted from *neutronpy*.
 
 ## Author
 

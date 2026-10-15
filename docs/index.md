@@ -5,8 +5,8 @@ triple-axis spectrometer **resolution calculation**, resolution-convolution
 **fitting**, **crystallography** helpers, and Qt **GUIs**.
 
 - Install name: `inspy-conv` — import name: `inspy`
-- Version: 0.3.3 — Python ≥ 3.8 — MIT license
-- Resolution core: faithful port of MATLAB **ResLib 3.4c** (A. Zheludev)
+- Version: 0.3.5 — Python ≥ 3.8 — MIT license
+
 
 ## What can it do?
 
