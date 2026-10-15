@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        
+        
+        <link rel="shortcut icon" href="../img/favicon.ico">
+        <title>Crystallography - inspy-conv</title>
+        <link href="../css/bootstrap.min.css" rel="stylesheet">
+        <link href="../css/fontawesome.min.css" rel="stylesheet">
+        <link href="../css/brands.min.css" rel="stylesheet">
+        <link href="../css/solid.min.css" rel="stylesheet">
+        <link href="../css/v4-font-face.min.css" rel="stylesheet">
+        <link href="../css/base.css" rel="stylesheet">
+        <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" >
+        <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" disabled>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+        <script>hljs.highlightAll();</script> 
+    </head>
+
+    <body>
+        <div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+                <a class="navbar-brand" href="..">inspy-conv</a>
+                <!-- Expander button -->
+                <button type="button" class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Expanded navigation -->
+                <div id="navbar-collapse" class="navbar-collapse collapse">
+                        <!-- Main navigation -->
+                        <ul class="nav navbar-nav">
+                            <li class="nav-item">
+                                <a href=".." class="nav-link">Home</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../installation/" class="nav-link">Installation</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../quickstart/" class="nav-link">Quick start</a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../cli/" class="nav-link">CLI reference</a>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle active" aria-current="page" role="button" data-bs-toggle="dropdown"  aria-expanded="false">User guide</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../energy/" class="dropdown-item">Energy</a>
+</li>
+                                    
+<li>
+    <a href="./" class="dropdown-item active" aria-current="page">Crystallography</a>
+</li>
+                                    
+<li>
+    <a href="../resolution/" class="dropdown-item">Resolution calculation</a>
+</li>
+                                    
+<li>
+    <a href="../fitting/" class="dropdown-item">Convolution fitting</a>
+</li>
+                                    
+<li>
+    <a href="../gui/" class="dropdown-item">GUIs</a>
+</li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"  aria-expanded="false">Developer guide</a>
+                                <ul class="dropdown-menu">
+                                    
+<li>
+    <a href="../architecture/" class="dropdown-item">Architecture</a>
+</li>
+                                    
+<li>
+    <a href="../development/" class="dropdown-item">Development</a>
+</li>
+                                </ul>
+                            </li>
+                        </ul>
+
+                    <ul class="nav navbar-nav ms-md-auto">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#mkdocs_search_modal">
+                                <i class="fa fa-search"></i> Search
+                            </a>
+                        </li>
+                            <li class="nav-item">
+                                <a rel="prev" href="../energy/" class="nav-link">
+                                    <i class="fa fa-arrow-left"></i> Previous
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a rel="next" href="../resolution/" class="nav-link">
+                                    Next <i class="fa fa-arrow-right"></i>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="https://github.com/gcdengansto/inspy" class="nav-link">gcdengansto/inspy</a>
+                            </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="row">
+                    <div class="col-md-3"><div class="navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggler collapsed" data-bs-toggle="collapse" data-bs-target="#toc-collapse" title="Table of Contents">
+            <span class="fa fa-angle-down"></span>
+        </button>
+    </div>
+
+    
+    <div id="toc-collapse" class="navbar-collapse collapse card bg-body-tertiary">
+        <ul class="nav flex-column">
+            
+            <li class="nav-item" data-bs-level="1"><a href="#crystallography" class="nav-link">Crystallography</a>
+              <ul class="nav flex-column">
+            <li class="nav-item" data-bs-level="2"><a href="#lattice" class="nav-link">Lattice</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#sample" class="nav-link">Sample</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#atom-magneticatom" class="nav-link">Atom / MagneticAtom</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#material" class="nav-link">Material</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#spacegroup" class="nav-link">SpaceGroup</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#structure-factors" class="nav-link">Structure factors</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+            <li class="nav-item" data-bs-level="2"><a href="#databases" class="nav-link">Databases</a>
+              <ul class="nav flex-column">
+              </ul>
+            </li>
+              </ul>
+            </li>
+        </ul>
+    </div>
+</div></div>
+                    <div class="col-md-9" role="main">
+
+<h1 id="crystallography">Crystallography<a class="headerlink" href="#crystallography" title="Permanent link">&para;</a></h1>
+<p>All classes below are importable from <code>inspy</code> directly or from <code>inspy.crystal</code>.</p>
+<pre><code class="language-python">from inspy.crystal import (Lattice, Sample, Atom, MagneticAtom,
+                           Material, SpaceGroup,
+                           NuclearStructureFactor, MagneticFormFactor,
+                           MagneticStructureFactor)
+</code></pre>
+<div class="admonition note">
+<p class="admonition-title">Units</p>
+<p>Lattice constants are in <strong>Å</strong>, angles (<code>alpha</code>, <code>beta</code>, <code>gamma</code>) in
+<strong>degrees</strong>. Radian variants are derived internally where needed.</p>
+</div>
+<h2 id="lattice">Lattice<a class="headerlink" href="#lattice" title="Permanent link">&para;</a></h2>
+<p>Defined by six parameters; provides metric tensors, reciprocal lattice,
+d-spacing, and volume.</p>
+<pre><code class="language-python">lat = Lattice(5.0, 5.0, 5.0, 90, 90, 90)
+lat.volume                    # 125.0 Å³
+lat.get_d_spacing([1, 0, 0])  # 5.0 Å
+lat.get_q([1, 0, 0])          # |Q| = 2π/d for that reflection
+lat.G, lat.Gstar              # metric tensors (direct / reciprocal)
+lat.Bmatrix                   # Cartesian basis matrix (B.T @ B = Gstar)
+lat.get_two_theta([1, 1, 1], wavelength=1.5)   # Bragg angle (deg)
+</code></pre>
+<p>Useful properties: <code>abc</code>, <code>abg</code> (degrees), <code>abg_rad</code>, <code>astar/bstar/cstar</code>,
+<code>alphastar/betastar/gammastar</code>, <code>lattice_type</code> (auto-classified:
+triclinic/monoclinic/orthorhombic/…).</p>
+<h2 id="sample">Sample<a class="headerlink" href="#sample" title="Permanent link">&para;</a></h2>
+<p><code>Sample</code> extends <code>Lattice</code> with the physical/orientational properties needed by
+a spectrometer calculation: orientation vectors <strong>u</strong>, <strong>v</strong>, mosaic spread,
+and sample shape.</p>
+<pre><code class="language-python">s = Sample(3, 4, 5, 90, 90, 90,
+           u=[1, 0, 0], v=[0, 1, 0],
+           mosaic=30, vmosaic=30,
+           width=20, height=20, depth=0.2)
+
+s.Umatrix        # orientation matrix (u, v)
+s.UBmatrix       # full UB matrix — hkl -&gt; Q in the lab frame
+s.get_phi(Q)     # rotation phi aligning Q into the scattering plane
+</code></pre>
+<p><code>Sample</code> is what <code>TripleAxisSpectr.sample</code> expects.</p>
+<h2 id="atom-magneticatom">Atom / MagneticAtom<a class="headerlink" href="#atom-magneticatom" title="Permanent link">&para;</a></h2>
+<pre><code class="language-python">atom = Atom('Mn', pos=[0, 0, 0], occupancy=1.0, Uiso=0.005)
+atom.b            # coherent scattering length (from scattering_lengths.json)
+atom.mass         # atomic mass (from periodic_table.json)
+</code></pre>
+<ul>
+<li><code>Atom</code> looks up coherent/incoherent scattering lengths, cross sections,
+  mass, and number density from the bundled databases.</li>
+<li><code>MagneticAtom</code> adds magnetic moment / form-factor lookup.</li>
+</ul>
+<h2 id="material">Material<a class="headerlink" href="#material" title="Permanent link">&para;</a></h2>
+<p><code>Material</code> = <code>Sample</code> + structure factors, built from a dictionary-based
+description of a crystal:</p>
+<pre><code class="language-python">crystal = {
+    'name': 'MnO',
+    'lattice': {'abc': [4.445, 4.445, 4.445], 'abg': [90, 90, 90]},
+    'space_group': 'Fm-3m',
+    'massNorm': False,
+    'formulaUnits': 1,            # optional, default 1
+    'composition': [
+        {'ion': 'Mn', 'pos': [0, 0, 0], 'occupancy': 1.0},
+        {'ion': 'O',  'pos': [0.5, 0.5, 0.5], 'occupancy': 1.0},
+    ],
+}
+mat = Material(crystal)
+mat.calc_nuc_str_fac([1, 1, 1])   # nuclear structure factor
+</code></pre>
+<p>Notes on the dictionary keys:</p>
+<ul>
+<li><code>'lattice'</code> is a <strong>nested dict</strong> with <code>'abc'</code> (Å) and <code>'abg'</code> (degrees) lists.</li>
+<li><code>'massNorm'</code> is read whenever <code>'space_group'</code> is present — include it.</li>
+<li>Per-composition <code>'occupancy'</code>, <code>'Uiso'</code>, <code>'Uaniso'</code> default to 1 / 0 / zeros.</li>
+<li>With a space group, each listed site is expanded through
+  <code>symmetrize_position</code> to the full set of equivalent positions.</li>
+</ul>
+<p>It inherits from <code>Sample</code>, <code>NuclearStructureFactor</code>, and
+<code>MagneticStructureFactor</code>.</p>
+<h2 id="spacegroup">SpaceGroup<a class="headerlink" href="#spacegroup" title="Permanent link">&para;</a></h2>
+<p>Any of the 230 groups, addressed by international symbol, Hermann–Mauguin
+symbol, or number:</p>
+<pre><code class="language-python">sg = SpaceGroup('Fm-3m')       # or SpaceGroup(225), SpaceGroup('P 21 21 21')
+sg.group_number
+sg.symmetry_operations         # list of operations
+sg.symmetrize_position([0, 0, 0])   # symmetry-equivalent positions
+</code></pre>
+<p>Backed by <code>database/symmetry.json</code>.</p>
+<h2 id="structure-factors">Structure factors<a class="headerlink" href="#structure-factors" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Class / method</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>NuclearStructureFactor.calc_nuc_str_fac(hkl)</code></td>
+<td>Nuclear structure factor F(hkl) with Debye–Waller factors</td>
+</tr>
+<tr>
+<td><code>MagneticFormFactor(ion)</code></td>
+<td>Magnetic form-factor coefficients (j0, j2, j4) for an ion, from <code>magnetic_form_factors.json</code></td>
+</tr>
+<tr>
+<td><code>MagneticStructureFactor</code></td>
+<td>Magnetic structure factor (partially implemented — magnetic interaction vector components exist; full polarization analysis is stubbed)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="databases">Databases<a class="headerlink" href="#databases" title="Permanent link">&para;</a></h2>
+<p>Four JSON files ship with the package and are loaded on demand:</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Loader</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>periodic_table.json</code></td>
+<td><code>periodic_table()</code></td>
+<td>mass, Z, density</td>
+</tr>
+<tr>
+<td><code>scattering_lengths.json</code></td>
+<td><code>scattering_lengths()</code></td>
+<td>coherent/incoherent b, cross sections</td>
+</tr>
+<tr>
+<td><code>magnetic_form_factors.json</code></td>
+<td><code>magnetic_ion_j()</code></td>
+<td>j0, j2, j4 coefficients</td>
+</tr>
+<tr>
+<td><code>symmetry.json</code></td>
+<td><code>symmetry()</code></td>
+<td>the 230 space groups</td>
+</tr>
+</tbody>
+</table>
+<p>Loader functions live in <code>inspy.constants</code>.</p></div>
+            </div>
+        </div>
+
+        <footer class="col-md-12">
+            <hr>
+            <p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+        </footer>
+        <script src="../js/bootstrap.bundle.min.js"></script>
+        <script>
+            var base_url = "..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+        <script src="../js/base.js"></script>
+        <script src="../search/main.js"></script>
+
+        <div class="modal" id="mkdocs_search_modal" tabindex="-1" role="dialog" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="searchModalLabel">Search</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>From here you can search these documents. Enter your search terms below.</p>
+                <form>
+                    <div class="form-group">
+                        <input type="search" class="form-control" placeholder="Search..." id="mkdocs-search-query" title="Type search term here">
+                    </div>
+                </form>
+                <div id="mkdocs-search-results" data-no-results-text="No results found"></div>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div><div class="modal" id="mkdocs_keyboard_modal" tabindex="-1" role="dialog" aria-labelledby="keyboardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th style="width: 20%;">Keys</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="help shortcut"><kbd>?</kbd></td>
+                    <td>Open this help</td>
+                  </tr>
+                  <tr>
+                    <td class="next shortcut"><kbd>n</kbd></td>
+                    <td>Next page</td>
+                  </tr>
+                  <tr>
+                    <td class="prev shortcut"><kbd>p</kbd></td>
+                    <td>Previous page</td>
+                  </tr>
+                  <tr>
+                    <td class="search shortcut"><kbd>s</kbd></td>
+                    <td>Search</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+</div>
+
+    </body>
+</html>
