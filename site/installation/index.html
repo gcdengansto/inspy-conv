@@ -195,10 +195,10 @@ print(en.wavelength)              # ~2.37 Å
 <li><code>import inspy</code> loads only the core scientific stack
   (constants, crystal, instrument, insfit) — <strong>no Qt, no GUI modules</strong>.</li>
 <li><code>inspy.main</code> is resolved on first access (PEP 562 <code>__getattr__</code>), which then
-  imports the resolution-calculation GUI.</li>
-<li>Each CLI mode imports its own GUI module only when its flag is selected, so a
-  missing fit-dialog dependency (Qt backend, <code>lmfit</code>) breaks only that mode —
-  not <code>import inspy</code> and not the other modes.</li>
+  imports the unified fitting GUI.</li>
+<li>The CLI imports the unified fit GUI only when launched. Missing GUI
+  dependencies (Qt backend, <code>lmfit</code>) do not affect <code>import inspy</code> or use of the
+  core scientific APIs.</li>
 </ul>
 <p>Practical consequence: on a headless/batch analysis machine you can install and
 use the calculation core without a working Qt stack, as long as you do not launch
@@ -214,14 +214,9 @@ the GUIs.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>inspy.main</code> raises <code>ImportError</code>, warning <code>QtPy not found...</code></td>
-<td>Qt bindings missing</td>
-<td><code>pip install PySide6</code> (or another QtPy-supported binding)</td>
-</tr>
-<tr>
-<td><code>-qscan</code> / <code>-escan</code> fail with <code>lmfit</code> import error</td>
-<td><code>lmfit</code> missing</td>
-<td><code>pip install lmfit</code></td>
+<td><code>inspy.main</code> or <code>inspy-conv</code> fails with a Qt/<code>lmfit</code> import error</td>
+<td>GUI dependencies missing</td>
+<td><code>pip install PySide6 lmfit</code></td>
 </tr>
 <tr>
 <td><code>pip install</code> succeeds but <code>import inspy</code> fails</td>

@@ -163,10 +163,10 @@ pip install -e &quot;.[dev]&quot;
 <pre><code class="language-bash">pytest tests/
 </code></pre>
 <blockquote>
-<p>The suite is small (<code>test_tas.py</code>, <code>test_mc.py</code>, <code>inspy_test.py</code>) — it
-exercises the TAS engine and conversions, not the GUIs. The files
-<code>tests/main_gui.py</code>, <code>tests/res_3D_plot.py</code> are scratch scripts for manual
-GUI runs, not pytest modules.</p>
+<p><code>tests/main_gui.py</code> and related GUI scratch scripts refer to the removed
+resolution-calculator GUI and its UI file; they are obsolete and should not
+be used. <code>tests/res_3D_plot.py</code> is a manual plotting script, not a pytest
+module.</p>
 </blockquote>
 <h2 id="conventions">Conventions<a class="headerlink" href="#conventions" title="Permanent link">&para;</a></h2>
 <h3 id="fix-markers">Fix markers<a class="headerlink" href="#fix-markers" title="Permanent link">&para;</a></h3>

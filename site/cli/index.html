@@ -156,7 +156,7 @@
 <p>Installing the package adds one console command, <strong><code>inspy-conv</code></strong>
 (defined in <code>pyproject.toml</code> as <code>inspy.__main__:main</code>).</p>
 <h2 id="synopsis">Synopsis<a class="headerlink" href="#synopsis" title="Permanent link">&para;</a></h2>
-<pre><code class="language-bash">inspy-conv [-h] [-rescalc | -escan | -qscan]
+<pre><code class="language-bash">inspy-conv [-h] [-fit]
 </code></pre>
 <h2 id="options">Options<a class="headerlink" href="#options" title="Permanent link">&para;</a></h2>
 <table>
@@ -169,19 +169,11 @@
 <tbody>
 <tr>
 <td><em>(none)</em></td>
-<td>Launch the <strong>resolution calculation GUI</strong> (default)</td>
+<td>Launch the unified energy- and Q-scan fitting GUI (default)</td>
 </tr>
 <tr>
-<td><code>-rescalc</code></td>
-<td>Same as default — resolution calculation GUI</td>
-</tr>
-<tr>
-<td><code>-escan</code></td>
-<td>Launch the <strong>energy-scan convolution-fit GUI</strong> (<code>gui_convfit_escan_uf</code>)</td>
-</tr>
-<tr>
-<td><code>-qscan</code></td>
-<td>Launch the <strong>Q-scan convolution-fit GUI</strong> (<code>gui_convfit_qscan_uf</code>)</td>
+<td><code>-fit</code></td>
+<td>Same as default — unified fitting GUI (<code>gui_convfit_uf</code>)</td>
 </tr>
 <tr>
 <td><code>-h</code>, <code>--help</code></td>
@@ -189,38 +181,26 @@
 </tr>
 </tbody>
 </table>
-<p>The three mode flags are <strong>mutually exclusive</strong> (argparse mutually-exclusive
-group); combining them is an error.</p>
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
-<pre><code class="language-bash">inspy-conv              # resolution calculator
-inspy-conv -escan       # E-scan fitting
-inspy-conv -qscan       # Q-scan fitting
-python -m inspy -qscan  # equivalent module form
+<pre><code class="language-bash">inspy-conv              # unified E/Q-scan fitting
+inspy-conv -fit         # same GUI, explicit mode
+python -m inspy         # equivalent module form
 </code></pre>
 <h2 id="behaviour">Behaviour<a class="headerlink" href="#behaviour" title="Permanent link">&para;</a></h2>
 <ul>
-<li>On start the command prints <code>Running inspy in the &lt;mode&gt; mode.</code> and then runs
-  the selected GUI's <code>main()</code>.</li>
-<li>The selected GUI module is imported <strong>lazily</strong>, only after the flag is parsed.
-  If the import fails (missing Qt binding, missing <code>lmfit</code>, …), the command
-  prints <code>Error: cannot start &lt;mode&gt; (&lt;description&gt;): &lt;detail&gt;</code> to <strong>stderr</strong>
-  and exits with status <strong>1</strong> — other modes are unaffected.</li>
-<li>A missing dependency therefore affects only the mode that needs it;
-  see <a href="../installation/#lazy-imports-and-optionally-guis">Installation → Lazy imports</a>.</li>
+<li>The selected GUI module is imported lazily when the command is run.</li>
+<li>If import fails (for example, because Qt or <code>lmfit</code> is missing), the command
+  prints an error to <strong>stderr</strong> and exits with status <strong>1</strong>.</li>
+<li>Core APIs such as <code>TripleAxisSpectr</code> remain importable without launching the
+  GUI.</li>
 </ul>
 <h2 id="programmatic-equivalent">Programmatic equivalent<a class="headerlink" href="#programmatic-equivalent" title="Permanent link">&para;</a></h2>
-<pre><code class="language-python">from inspy.__main__ import main
-
-main([])          # resolution calculator
-main(['-escan'])  # energy-scan GUI
-main(['-qscan'])  # Q-scan GUI
-</code></pre>
-<p>GUI modules can also be started directly (the package <code>__init__</code> deliberately
-re-exports nothing GUI-related — import the concrete module):</p>
 <pre><code class="language-python">import inspy
-inspy.main()                                   # resolution calculator (lazy attribute)
-from inspy.gui.gui_convfit_qscan_uf import main
-main()                                         # Q-scan GUI
+inspy.main()  # unified energy- and Q-scan fitting GUI
+</code></pre>
+<p>The GUI can also be started directly:</p>
+<pre><code class="language-python">from inspy.gui.gui_convfit_uf import main
+main()
 </code></pre></div>
             </div>
         </div>
