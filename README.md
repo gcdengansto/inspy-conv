@@ -3,7 +3,7 @@
 **inspy-conv** (install name: `inspy-conv`, import name: `inspy`) is a Python toolkit
 for **inelastic neutron scattering data analysis**. It provides triple-axis spectrometer
 resolution calculation (Cooper–Nathans / Popovici), resolution-convolution fitting of
-S(Q,ω) models, crystal lattice and space-group tools, and Qt-based interactive GUIs.
+S(Q,ω) models, crystal lattice and space-group tools, and a Qt-based interactive GUI.
 
 The resolution algorithms are the same as **ResLib**, with known issues tracked and fixed incrementally.
 
@@ -18,8 +18,8 @@ The resolution algorithms are the same as **ResLib**, with known issues tracked 
   (`FitConv`, `UltraFastFitConv`).
 - **Crystallography** — lattices, UB orientation matrices, the 230 space groups,
   nuclear/magnetic structure factors, built-in scattering and form-factor databases.
-- **Interactive GUIs** — resolution calculator, Q-scan fit, E-scan fit.
-- **CLI** — one console command launches any of the three GUIs.
+- **Interactive GUI** — unified E/Q-scan resolution-convolution fitting.
+- **CLI** — launches the unified fit GUI by default.
 
 ---
 
@@ -51,15 +51,13 @@ See [docs/installation.md](docs/installation.md).
 Installing the package provides the `inspy-conv` console command:
 
 ```bash
-inspy-conv            # resolution calculator GUI (default)
-inspy-conv -rescalc   # same as default
-inspy-conv -escan     # energy-scan convolution-fit GUI
-inspy-conv -qscan     # Q-scan convolution-fit GUI
+inspy-conv            # unified energy/Q-scan fit GUI (default)
+inspy-conv -fit       # unified energy/Q-scan convolution-fit GUI
 inspy-conv -h         # help
 ```
 
-The three flags are mutually exclusive; without a flag the resolution calculator
-starts. `python -m inspy [flag]` is equivalent.
+The unified fitting GUI starts with or without `-fit`.
+`python -m inspy [flag]` is equivalent.
 Full reference: [docs/cli.md](docs/cli.md).
 
 ---
@@ -104,7 +102,7 @@ More in [docs/quickstart.md](docs/quickstart.md).
 
 ```
 src/inspy/
-├── __main__.py            # CLI dispatch (-rescalc / -escan / -qscan)
+├── __main__.py            # CLI dispatch (unified fit GUI)
 ├── constants.py           # Physical constants + database loaders
 ├── energy.py              # Energy / wavelength / wavevector conversion
 ├── crystal/               # Crystallography
@@ -125,9 +123,7 @@ src/inspy/
 │   ├── fitconv.py         #   FitConv (scipy.optimize.least_squares, method='trf')
 │   └── uffitconv.py       #   UltraFastFitConv (caching, precompute, adaptive steps)
 ├── gui/                   # Qt graphical interfaces (imported lazily)
-│   ├── main_gui.py        #   Resolution calculator GUI
-│   ├── gui_convfit_qscan_uf.py  # Q-scan convolution-fit GUI
-│   ├── gui_convfit_escan_uf.py  # E-scan convolution-fit GUI
+│   ├── gui_convfit_uf.py  #   Unified E/Q-scan convolution-fit GUI
 │   ├── tools.py           #   Shared widgets + demo S(Q,w)/prefactor models
 │   └── ui/                #   Qt Designer .ui files
 └── database/              # JSON data files (packaged via pyproject.toml)

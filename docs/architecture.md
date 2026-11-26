@@ -34,7 +34,7 @@ inspy-conv/
                 │
              insfit
                 │
-              gui ────────────────► lmfit, QtPy/PySide6 (fitting dialogs)
+              gui ────────────────► lmfit, QtPy/PySide6
                 │
            __main__ (CLI)          inspy/__init__ (public API)
 ```
@@ -51,17 +51,13 @@ Rules of thumb visible in the code:
 Two mechanisms keep `import inspy` cheap and robust:
 
 1. **`inspy/gui/__init__.py` imports nothing eagerly.**
-   The three GUI modules (and their `lmfit`/Qt dependencies) are pulled in by
-   `__main__`'s `PROGRAMS` dispatch only when the corresponding CLI flag is
-   selected. Importing a concrete module directly
-   (`from inspy.gui.gui_convfit_qscan_uf import main`) still works — Python
-   imports submodules on demand. (Older docs suggested
-   `from inspy.gui import main_qscan`; that re-export was removed in 0.3.x —
-   use the concrete module path above.)
+   The unified fit GUI (and its Qt dependencies) is pulled in by `__main__` only
+   when the CLI is run. It can also be imported directly; Python loads the
+   module on demand.
 
 2. **`inspy.main` uses a PEP 562 module `__getattr__`.**
    The attribute is resolved on first access: `inspy.main()` imports
-   `gui.main_gui` at call time. A missing Qt stack therefore surfaces exactly
+   `gui.gui_convfit_uf` at call time. Missing Qt dependencies therefore surface
    when the GUI is requested (with the historical warning), not at
    `import inspy`.
 
@@ -70,9 +66,9 @@ Two mechanisms keep `import inspy` cheap and robust:
 def __getattr__(name):
     if name == 'main':
         try:
-            from .gui.main_gui import main
+            from .gui.gui_convfit_uf import main
         except ImportError:
-            warnings.warn('QtPy not found, cannot run Resolution GUI.')
+            warnings.warn('QtPy not found, cannot run the unified fitting GUI.')
             raise
         return main
     raise AttributeError(name)

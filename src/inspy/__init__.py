@@ -22,15 +22,13 @@ from .insfit import FitConv, UltraFastFitConv
 
 
 def __getattr__(name):
-    #20261010: §1.1/§6.3 Fix: `main` is resolved on first attribute access instead of at
-    #   import time, so bare `import inspy` no longer pulls the GUI stack (Qt matplotlib
-    #   backend and, via the fitting dialogs, lmfit). A missing GUI dependency is
-    #   reported only when `inspy.main` is actually requested.
+    # Resolve the unified fit GUI on demand so `import inspy` does not load Qt.
     if name == 'main':
         try:
-            from .gui.main_gui import main
+            from .gui.gui_convfit_uf import main
         except ImportError:
-            warnings.warn('QtPy not found, cannot run Resolution GUI.')
+            warnings.warn(
+                'GUI dependencies are unavailable; cannot run the unified fitting GUI.')
             raise
         return main
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

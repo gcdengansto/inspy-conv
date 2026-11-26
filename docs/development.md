@@ -15,10 +15,10 @@ Run the tests:
 pytest tests/
 ```
 
-> The suite is small (`test_tas.py`, `test_mc.py`, `inspy_test.py`) — it
-> exercises the TAS engine and conversions, not the GUIs. The files
-> `tests/main_gui.py`, `tests/res_3D_plot.py` are scratch scripts for manual
-> GUI runs, not pytest modules.
+> `tests/main_gui.py` and related GUI scratch scripts refer to the removed
+> resolution-calculator GUI and its UI file; they are obsolete and should not
+> be used. `tests/res_3D_plot.py` is a manual plotting script, not a pytest
+> module.
 
 ## Conventions
 

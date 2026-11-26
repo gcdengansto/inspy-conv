@@ -4,12 +4,287 @@ import sys
 import numpy as np
 from matplotlib.backends.backend_qtagg  import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+from qtpy.QtCore import Qt
+from qtpy.QtWidgets import (QDialog, QDialogButtonBox, QFormLayout, QHBoxLayout,
+                            QLabel, QPlainTextEdit, QSpinBox, QVBoxLayout,
+                            QComboBox, QTableWidget, QTableWidgetItem, QLineEdit)
 
 
 from ..energy import Energy
 from ..instrument.tools import get_tau, _cleanargs, _star, _modvec
 from ..instrument.tas_spectr import TripleAxisSpectr
 #from ..insfit import FitConv
+
+
+def _read_text_lines(filepath):
+    try:
+        with open(filepath, 'r', encoding='utf-8-sig') as stream:
+            lines = stream.readlines()
+    except UnicodeDecodeError:
+        with open(filepath, 'r', encoding='cp1252') as stream:
+            lines = stream.readlines()
+    return lines
+
+
+def _split_data_line(line, delimiter='whitespace'):
+    line = line.strip()
+    if not line or line.startswith('#'):
+        return None
+    if delimiter == 'whitespace':
+        fields = line.split()
+    elif delimiter == 'comma':
+        fields = line.split(',')
+    elif delimiter == 'tab':
+        fields = line.split('\t')
+    elif delimiter == 'semicolon':
+        fields = line.split(';')
+    else:
+        fields = line.split(delimiter)
+    return [field.strip() for field in fields if field.strip()]
+
+
+def _parse_hklw_lines(lines, skip_lines=0, delimiter='whitespace',
+                      h_col=0, k_col=1, l_col=2, w_col=3, i_col=4):
+    column_indexes = [h_col, k_col, l_col, w_col, i_col]
+    if len(set(column_indexes)) != 5:
+        raise ValueError("H, K, L, W, and intensity must use five different columns")
+    if min(column_indexes) < 0:
+        raise ValueError("Column indexes must be zero-based and non-negative")
+
+    rows = []
+    for line_number, line in enumerate(lines):
+        if line_number < skip_lines:
+            continue
+        fields = _split_data_line(line, delimiter)
+        if fields is None:
+            continue
+        try:
+            required = max(column_indexes)
+            if len(fields) <= required:
+                continue
+            row = [float(fields[index]) for index in column_indexes]
+        except (TypeError, ValueError):
+            continue
+        if not np.all(np.isfinite(row)):
+            continue
+        rows.append(row)
+
+    if not rows:
+        raise ValueError("No valid numeric data rows matched the current import settings")
+
+    data = np.asarray(rows, dtype=float).T
+    iobs = data[4]
+    if np.any(iobs < 0):
+        raise ValueError("Intensity values must be non-negative")
+    return tuple(data[index] for index in range(5)) + (np.sqrt(iobs),)
+
+
+def _load_hklw(filepath, skip_lines=0, delimiter='whitespace',
+               h_col=0, k_col=1, l_col=2, w_col=3, i_col=4):
+    r"""Load HKLW data using configurable text-import settings."""
+    lines = _read_text_lines(filepath)
+    return _parse_hklw_lines(
+        lines, skip_lines=skip_lines, delimiter=delimiter,
+        h_col=h_col, k_col=k_col, l_col=l_col, w_col=w_col, i_col=i_col)
+
+
+class HKLWImportDialog(QDialog):
+    r"""Text-data preview and HKLW column mapping dialog."""
+
+    def __init__(self, filepath, parent=None):
+        super(HKLWImportDialog, self).__init__(parent)
+        self.filepath = filepath
+        self.lines = _read_text_lines(filepath)
+        self.result_data = None
+
+        self.setWindowTitle("Import data")
+        self.resize(760, 520)
+
+        layout = QVBoxLayout(self)
+        layout.addWidget(QLabel(os.path.basename(filepath)))
+
+        preview_layout = QHBoxLayout()
+        self.preview_text = QPlainTextEdit()
+        self.preview_text.setReadOnly(True)
+        self.preview_text.setMaximumWidth(320)
+        self.preview_text.setLineWrapMode(QPlainTextEdit.NoWrap)
+        self.preview_text.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        preview_layout.addWidget(self.preview_text)
+
+        settings = QFormLayout()
+        self.skip_lines = QSpinBox()
+        self.skip_lines.setRange(0, 100000)
+        try:
+            first_fields = _split_data_line(self.lines[0]) if self.lines else None
+            if first_fields:
+                [float(field) for field in first_fields]
+            inferred_skip = 0
+        except ValueError:
+            inferred_skip = 1
+        self.skip_lines.setValue(inferred_skip)
+        settings.addRow("Header lines to skip:", self.skip_lines)
+
+        self.delimiter = QComboBox()
+        self.delimiter.addItem("Whitespace", "whitespace")
+        self.delimiter.addItem("Comma", "comma")
+        self.delimiter.addItem("Tab", "tab")
+        self.delimiter.addItem("Semicolon", "semicolon")
+        self.delimiter.addItem("Custom", "custom")
+        settings.addRow("Delimiter:", self.delimiter)
+
+        self.custom_delimiter = QLineEdit()
+        self.custom_delimiter.setPlaceholderText("Custom delimiter")
+        settings.addRow("Custom delimiter:", self.custom_delimiter)
+
+        self.h_col = QSpinBox()
+        self.k_col = QSpinBox()
+        self.l_col = QSpinBox()
+        self.w_col = QSpinBox()
+        self.i_col = QSpinBox()
+        for spinbox in (self.h_col, self.k_col, self.l_col, self.w_col, self.i_col):
+            spinbox.setRange(0, 100)
+
+        self.k_col.setValue(1)
+        self.l_col.setValue(2)
+        self.w_col.setValue(3)
+        self.i_col.setValue(4)
+        settings.addRow("H column (0-based):", self.h_col)
+        settings.addRow("K column (0-based):", self.k_col)
+        settings.addRow("L column (0-based):", self.l_col)
+        settings.addRow("W column (0-based):", self.w_col)
+        settings.addRow("Intensity column (0-based):", self.i_col)
+
+        settings_widget = QLabel()
+        settings_widget.setLayout(settings)
+        preview_layout.addWidget(settings_widget)
+        layout.addLayout(preview_layout)
+
+        self.status_label = QLabel()
+        layout.addWidget(self.status_label)
+
+        self.table = QTableWidget()
+        self.table.setColumnCount(5)
+        self.table.setHorizontalHeaderLabels(["H", "K", "L", "W", "Intensity"])
+        layout.addWidget(self.table)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+        self.preview_text.setPlainText("".join(self.lines[:50]))
+
+        self.skip_lines.valueChanged.connect(self.refresh_preview)
+        self.delimiter.currentIndexChanged.connect(self.refresh_preview)
+        self.custom_delimiter.textChanged.connect(self.refresh_preview)
+        for spinbox in (self.h_col, self.k_col, self.l_col, self.w_col, self.i_col):
+            spinbox.valueChanged.connect(self.refresh_preview)
+        self.refresh_preview()
+
+    def refresh_preview(self):
+        try:
+            delimiter = self.delimiter.currentData()
+            if delimiter == "custom":
+                delimiter = self.custom_delimiter.text()
+                if not delimiter:
+                    raise ValueError("Enter a custom delimiter")
+            loaded = _parse_hklw_lines(
+                self.lines,
+                skip_lines=self.skip_lines.value(),
+                delimiter=delimiter,
+                h_col=self.h_col.value(),
+                k_col=self.k_col.value(),
+                l_col=self.l_col.value(),
+                w_col=self.w_col.value(),
+                i_col=self.i_col.value())
+        except ValueError as exc:
+            self.result_data = None
+            self.status_label.setText(str(exc))
+            self.status_label.setStyleSheet("color: red")
+            self.table.setRowCount(0)
+            return
+
+        self.result_data = loaded
+        self.status_label.setText(
+            "Valid data: {0} rows; dIobs = sqrt(intensity)".format(
+                len(loaded[0])))
+        self.status_label.setStyleSheet("color: green")
+
+        preview_rows = min(20, len(loaded[0]))
+        self.table.setRowCount(preview_rows)
+        for row in range(preview_rows):
+            for column in range(5):
+                item = QTableWidgetItem("{0:.8g}".format(loaded[column][row]))
+                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+                self.table.setItem(row, column, item)
+
+    def accept(self):
+        if self.result_data is None:
+            self.status_label.setText(
+                "Choose valid header, delimiter, and column settings before importing")
+            self.status_label.setStyleSheet("color: red")
+            return
+        super(HKLWImportDialog, self).accept()
+
+
+def _parse_param_fixed(text, count, name='parameter fixed mask'):
+    r"""Parse and validate a whitespace-separated 0/1 parameter mask."""
+    if text is None:
+        raise ValueError("{0} is empty".format(name))
+
+    tokens = str(text).strip().split()
+    if not tokens:
+        raise ValueError("{0} is empty".format(name))
+    if len(tokens) != count:
+        raise ValueError(
+            "{0} must contain exactly {1} values; got {2}".format(
+                name, count, len(tokens)))
+
+    mask = []
+    for token in tokens:
+        if token not in ('0', '1'):
+            raise ValueError(
+                "{0} contains invalid value '{1}'; use only 0 or 1".format(
+                    name, token))
+        mask.append(int(token))
+    return mask
+
+
+def _parse_curvature_radius(text, label):
+    """Return a curvature radius entered in cm, or infinity for a flat crystal."""
+    value = str(text).strip()
+    if value.lower() in ('', 'none', 'flat', 'inf', 'infinity'):
+        return np.inf
+
+    try:
+        radius = float(value)
+    except ValueError as exc:
+        raise ValueError(
+            "{0} curvature must be a positive radius in cm or 'None' for flat".format(
+                label)) from exc
+
+    if not np.isfinite(radius) or radius <= 0:
+        if np.isposinf(radius):
+            return radius
+        raise ValueError(
+            "{0} curvature must be a positive radius in cm or 'None' for flat".format(
+                label))
+    return radius
+
+
+def _detect_qscan_axes(h, k, l):
+    """Return HKL axes that vary beyond numerical rounding noise."""
+    varying = []
+    for axis, values in zip(('QH', 'QK', 'QL'), (h, k, l)):
+        values = np.asarray(values, dtype=float)
+        if values.size == 0 or not np.all(np.isfinite(values)):
+            continue
+        scale = max(1.0, float(np.max(np.abs(values))))
+        tolerance = max(1e-10, 1e-8 * scale)
+        if float(np.max(values) - np.min(values)) > tolerance:
+            varying.append(axis)
+    return varying
 
 
 def angle2(x, y, z, h, k, l, lattice):

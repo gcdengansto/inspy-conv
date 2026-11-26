@@ -50,10 +50,10 @@ The package uses **lazy loading**:
 - `import inspy` loads only the core scientific stack
   (constants, crystal, instrument, insfit) — **no Qt, no GUI modules**.
 - `inspy.main` is resolved on first access (PEP 562 `__getattr__`), which then
-  imports the resolution-calculation GUI.
-- Each CLI mode imports its own GUI module only when its flag is selected, so a
-  missing fit-dialog dependency (Qt backend, `lmfit`) breaks only that mode —
-  not `import inspy` and not the other modes.
+  imports the unified fitting GUI.
+- The CLI imports the unified fit GUI only when launched. Missing GUI
+  dependencies (Qt backend, `lmfit`) do not affect `import inspy` or use of the
+  core scientific APIs.
 
 Practical consequence: on a headless/batch analysis machine you can install and
 use the calculation core without a working Qt stack, as long as you do not launch
@@ -63,8 +63,7 @@ the GUIs.
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
-| `inspy.main` raises `ImportError`, warning `QtPy not found...` | Qt bindings missing | `pip install PySide6` (or another QtPy-supported binding) |
-| `-qscan` / `-escan` fail with `lmfit` import error | `lmfit` missing | `pip install lmfit` |
+| `inspy.main` or `inspy-conv` fails with a Qt/`lmfit` import error | GUI dependencies missing | `pip install PySide6 lmfit` |
 | `pip install` succeeds but `import inspy` fails | Broken environment / path | Reinstall with `pip install --force-reinstall inspy-conv` |
 | Package data (`database/*.json`, `gui/ui/*.ui`) missing | Old install tooling | Reinstall from PyPI or use an editable install; data files are declared in `pyproject.toml` |
 

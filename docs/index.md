@@ -15,7 +15,7 @@ triple-axis spectrometer **resolution calculation**, resolution-convolution
 | Resolution | Cooper–Nathans and Popovici formalisms; `R0` prefactor and 4×4 `RMS`/`RM` matrices in Q–E and HKL–E frames |
 | Convolution fitting | Fit S(Q,ω) model parameters against measured scans with the resolution convolved in (`FitConv`, `UltraFastFitConv`) |
 | Crystallography | Lattice metrics, UB orientation matrix, 230 space groups, nuclear/magnetic structure factors, built-in databases |
-| GUIs | Resolution calculator, Q-scan fit, E-scan fit — launched from one console command |
+| GUI | Unified E/Q-scan fit — launched from one console command |
 
 ## Where to start
 

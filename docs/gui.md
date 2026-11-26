@@ -1,63 +1,52 @@
-# GUIs
+# GUI
 
-Three Qt (PySide6 via QtPy) interfaces ship with the package. They are imported
-**lazily** — see [Installation](installation.md#lazy-imports-and-optionally-guis).
+The unified Qt (PySide6 via QtPy) fitting interface ships with the package. It
+is imported **lazily** — see
+[Installation](installation.md#lazy-imports-and-optional-guis).
 
 ## Launching
 
 ```bash
-inspy-conv            # resolution calculator (default)
-inspy-conv -escan     # energy-scan fit
-inspy-conv -qscan     # Q-scan fit
+inspy-conv            # unified fit GUI (default)
+inspy-conv -fit       # unified energy- and Q-scan fit
 ```
 
 or from Python:
 
 ```python
 import inspy
-inspy.main()                    # resolution calculator
 
-from inspy.gui import gui_convfit_escan_uf, gui_convfit_qscan_uf
-gui_convfit_escan_uf.main()     # E-scan fit
-gui_convfit_qscan_uf.main()     # Q-scan fit
+from inspy.gui.gui_convfit_uf import main as fit_main
+fit_main()                      # unified E/Q-scan fit
 ```
 
-Each module also has a `MainWindow` class if you want to embed it.
+`inspy.main()` launches the same unified fit GUI. The `MainWindow` class can be
+embedded in another Qt application.
 
-## 1. Resolution calculator — `main_gui.py`
+## Unified scan fit — `gui_convfit_uf.py`
 
-The default mode. Three linked resolution panels (**QxQy, QxE, QyE**) with the
-full instrument parameter set (collimation, arms, mono/ana, sample, energy)
-editable in side docks. Recalculates `CalcResMatHKL` + `ResolutionPlotProj`
-interactively.
+The unified fit GUI detects the scan type after data import:
 
-UI definition: `src/inspy/gui/ui/resolution.ui` (Qt Designer).
+- If W varies and H/K/L are constant, it uses the energy-transfer model.
+- If one or more HKL coordinates vary and W is constant, it uses the Q-scan
+  model.
+- Changes of at most 0.005 r.l.u. in H/K/L and 0.05 meV in W are treated as
+  motor tolerance. If multiple coordinates exceed their tolerance, the GUI
+  warns and asks which coordinate is the intended scan axis.
+- If no coordinate varies beyond its tolerance, it warns and does not load the
+  data.
 
-## 2. Q-scan fit — `gui_convfit_qscan_uf.py`
-
-Fit a constant-Q scan (intensity vs QH/QK/QL) with the resolution convolved in.
-
-- Model: `SqwQScanTwoPeaks` — two Gaussians in Q
-  (widths `p[3]`, `p[4]` are **FWHM in Q**), ratio `p[2]` scales **peak 2**,
-  `p[5]` overall scale (via `PrefDemoFF`).
-- Data: load a text/table file, select the H K L W Iobs dIobs columns.
-- Uses `UltraFastFitConv` with `lmfit` for parameter handling/reporting.
-
-## 3. E-scan fit — `gui_convfit_escan_uf.py`
-
-Fit a constant-E scan (intensity vs energy transfer).
-
-- Model: `SqwDemo` — two Lorentzians in W with Bose factor
-  (Γ₁ = `p[3]`, Γ₂ = `p[4]` are **HWHM**), ratio `p[2]` scales **peak 1**.
-- Same data-loading and fitting flow as the Q-scan GUI.
+The Q model (`SqwQScanTwoPeaks`) fits two Gaussians in the selected Q
+coordinate (FWHM); the energy model (`SqwDemo`) fits two Lorentzians in W
+(HWHM). Both use `UltraFastFitConv`.
 
 ## Printed output
 
-After a fit both fitting dialogs print a parameter table. Conventions:
+After a fit the unified GUI prints a parameter table. Conventions:
 
 | Label | Meaning |
 |-------|---------|
-| `QH1/QH2` (or `EN1/EN2` for E-scan) | peak centres, error |
+| `QH1/QH2` (or `EN1/EN2` for an energy scan) | peak centres, error |
 | `Int1/Int2` | **peak integrals** — Int1 belongs to peak 1 (under the first centre label), Int2 to peak 2 |
 | `FWHM1/FWHM2` (Q-scan) | Gaussian FWHM in Q — equals the model width `p[3]`/`p[4]` |
 | `HWHM1/HWHM2` (E-scan) | Lorentzian HWHM — equals `p[3]`/`p[4]` |
@@ -65,14 +54,12 @@ After a fit both fitting dialogs print a parameter table. Conventions:
 | `bg`, `temp` | background `p[6]`, temperature `p[7]` |
 
 !!! note "Fixed in the 2026-10 review"
-    - The Q-scan dialog's widths were briefly mislabelled `HWHM` during the
-      port; they are Gaussian **FWHM** and are printed as `FWHM1/FWHM2`.
-    - Q-scan `Int1/Int2` were swapped relative to the model (the ratio
-      multiplies peak **2** there); they are now printed in peak order with
-      first-order error propagation on `Int2 = ratio·p5`.
+    - Q-scan widths are Gaussian **FWHM** and are printed as `FWHM1/FWHM2`.
+    - The Q-model ratio multiplies peak **2**; `Int1/Int2` are printed in
+      peak order with first-order error propagation on `Int2 = ratio·p5`.
 
 ## Qt / headless notes
 
-- The GUIs need a working Qt binding (`PySide6` by default through `QtPy`).
+- The GUI needs a working Qt binding (`PySide6` by default through `QtPy`).
 - On headless machines the calculation core (`TripleAxisSpectr`, fitting
-  classes) still works — only the GUIs refuse to start.
+  classes) still works — only the GUI refuses to start.

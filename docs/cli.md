@@ -6,58 +6,43 @@ Installing the package adds one console command, **`inspy-conv`**
 ## Synopsis
 
 ```bash
-inspy-conv [-h] [-rescalc | -escan | -qscan]
+inspy-conv [-h] [-fit]
 ```
 
 ## Options
 
 | Flag | Effect |
 |------|--------|
-| *(none)* | Launch the **resolution calculation GUI** (default) |
-| `-rescalc` | Same as default — resolution calculation GUI |
-| `-escan` | Launch the **energy-scan convolution-fit GUI** (`gui_convfit_escan_uf`) |
-| `-qscan` | Launch the **Q-scan convolution-fit GUI** (`gui_convfit_qscan_uf`) |
+| *(none)* | Launch the unified energy- and Q-scan fitting GUI (default) |
+| `-fit` | Same as default — unified fitting GUI (`gui_convfit_uf`) |
 | `-h`, `--help` | Show usage and exit |
-
-The three mode flags are **mutually exclusive** (argparse mutually-exclusive
-group); combining them is an error.
 
 ## Examples
 
 ```bash
-inspy-conv              # resolution calculator
-inspy-conv -escan       # E-scan fitting
-inspy-conv -qscan       # Q-scan fitting
-python -m inspy -qscan  # equivalent module form
+inspy-conv              # unified E/Q-scan fitting
+inspy-conv -fit         # same GUI, explicit mode
+python -m inspy         # equivalent module form
 ```
 
 ## Behaviour
 
-- On start the command prints `Running inspy in the <mode> mode.` and then runs
-  the selected GUI's `main()`.
-- The selected GUI module is imported **lazily**, only after the flag is parsed.
-  If the import fails (missing Qt binding, missing `lmfit`, …), the command
-  prints `Error: cannot start <mode> (<description>): <detail>` to **stderr**
-  and exits with status **1** — other modes are unaffected.
-- A missing dependency therefore affects only the mode that needs it;
-  see [Installation → Lazy imports](installation.md#lazy-imports-and-optionally-guis).
+- The selected GUI module is imported lazily when the command is run.
+- If import fails (for example, because Qt or `lmfit` is missing), the command
+  prints an error to **stderr** and exits with status **1**.
+- Core APIs such as `TripleAxisSpectr` remain importable without launching the
+  GUI.
 
 ## Programmatic equivalent
 
 ```python
-from inspy.__main__ import main
-
-main([])          # resolution calculator
-main(['-escan'])  # energy-scan GUI
-main(['-qscan'])  # Q-scan GUI
+import inspy
+inspy.main()  # unified energy- and Q-scan fitting GUI
 ```
 
-GUI modules can also be started directly (the package `__init__` deliberately
-re-exports nothing GUI-related — import the concrete module):
+The GUI can also be started directly:
 
 ```python
-import inspy
-inspy.main()                                   # resolution calculator (lazy attribute)
-from inspy.gui.gui_convfit_qscan_uf import main
-main()                                         # Q-scan GUI
+from inspy.gui.gui_convfit_uf import main
+main()
 ```

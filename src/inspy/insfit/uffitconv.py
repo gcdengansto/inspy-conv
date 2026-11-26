@@ -221,7 +221,7 @@ class UltraFastFitConv(object):
         if verbose:
             print(f"Ultra-fast fitting: {self.npoints} data points, {nfree} free parameters")
             print(f"Method: {method}, Max evaluations: {maxfev}")
-            print("FuncEvals     Chi²/DF        Time(s)")
+            print("FuncEvals     Chi^2/DF       Time(s)")
             print("-" * 40)
         
         # Optimization setup
@@ -316,14 +316,14 @@ class UltraFastFitConv(object):
             print("-" * 40)
             print(f"Fitting completed in {elapsed_total:.2f} seconds")
             print(f"Total function evaluations: {self.fitcount}")
-            print(f"Final χ²/DF: {chisq_reduced:.6f}")
+            print(f"Final Chi^2/DF: {chisq_reduced:.6f}")
             print(f"Convergence: {'Success' if result.success else 'Failed'}")
             print(f"Exit message: {result.message}")
             
             print("\nFinal Parameters:")
             for i, (val, err) in enumerate(zip(final_params, param_errors)):
                 status = "free" if param_fixed_mask[i] else "fixed"
-                print(f"  {i:2d}: {val:12.6f} ± {err:12.6f} ({status})")
+                print(f"  {i:2d}: {val:12.6f} +/- {err:12.6f} ({status})")
         
         # Return comprehensive results
         return {

@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Background task helpers for the Qt GUIs.
+"""Background task helpers for the unified fitting GUI.
 
-Two things the conv-fit and resolution GUIs do are far too slow to run on the Qt
-main thread:
+Two fitting-GUI operations are too slow to run on the Qt main thread:
 
 * rebuilding the instrument and computing the resolution matrices (three
   ``CalcResMatHKL`` calls plus three projections) on every committed keystroke or

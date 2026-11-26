@@ -9,7 +9,6 @@ sane. They do not drive the widgets: Qt event loops are not the subject here.
 import os
 import time
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
@@ -22,11 +21,9 @@ pytestmark = pytest.mark.gui
 
 from qtpy.QtWidgets import QApplication, QWidget   # noqa: E402
 
-from inspy.gui.gui_convfit_escan_uf import MainWindow as EScanWindow   # noqa: E402
-from inspy.gui.gui_convfit_qscan_uf import MainWindow as QScanWindow   # noqa: E402
-from inspy.gui.main_gui import MainWindow as MainWindow_               # noqa: E402
+from inspy.gui.gui_convfit_uf import MainWindow as UnifiedFitWindow     # noqa: E402
 
-WINDOWS = [('main_gui', MainWindow_), ('qscan', QScanWindow), ('escan', EScanWindow)]
+WINDOWS = [('fit', UnifiedFitWindow)]
 
 
 @pytest.fixture(scope='module')
@@ -67,89 +64,8 @@ def _settle(win):
     QApplication.sendPostedEvents()
 
 
-def _load_all(qapp):
-    for _, cls in WINDOWS:
-        win = cls()
-        win.load_instrument()
-        yield win
-
-
 class TestBackgroundWork:
     """Review items 180 and 181: the slow work must leave the GUI thread."""
-
-    @pytest.mark.parametrize('window', [('escan', EScanWindow), ('qscan', QScanWindow)],
-                             indirect=True)
-    def test_load_instrument_returns_before_the_resolution_is_computed(self, window):
-        """The call must not block: it schedules the work and returns.
-
-        Previously it rebuilt the instrument and computed three resolution
-        matrices inline, so every committed keystroke froze the window.
-        """
-        runner = window._resolution_runner
-        window.load_instrument()
-        # A request was made and the worker is occupied (or already finished).
-        assert runner.busy or window._generation > 1
-        _settle(window)
-        assert not runner.busy
-
-    @pytest.mark.parametrize('window', [('escan', EScanWindow), ('qscan', QScanWindow)],
-                             indirect=True)
-    def test_the_gui_thread_is_free_while_the_worker_runs(self, window):
-        """A second request must be accepted while the first is still running."""
-        import threading
-        worker_threads = set()
-
-        original = window._compute_resolution.__func__ if hasattr(window._compute_resolution, '__func__') \
-            else window._compute_resolution
-
-        def spy(instr, hkle):
-            worker_threads.add(threading.current_thread().name)
-            return original(instr, hkle)
-
-        window._compute_resolution = spy
-
-        window.load_instrument()
-        window.load_instrument()          # must not raise or block
-        _settle(window)
-
-        main_thread = threading.current_thread().name
-        assert worker_threads, 'the resolution was never computed on a worker'
-        assert main_thread not in worker_threads
-
-    @pytest.mark.parametrize('window', [('escan', EScanWindow), ('qscan', QScanWindow)],
-                             indirect=True)
-    def test_rapid_requests_are_coalesced(self, window):
-        """Six edits in a row must not queue six resolutions."""
-        counts = []
-        original = window._compute_resolution
-
-        def counting(instr, hkle):
-            counts.append(1)
-            return original(instr, hkle)
-
-        window._compute_resolution = counting
-
-        for _ in range(6):
-            window.load_instrument()
-        _settle(window)
-
-        # At most one in flight plus one coalesced re-run.
-        assert len(counts) <= 2, 'ran %d times for 6 requests' % len(counts)
-        assert counts, 'nothing ran at all'
-
-    @pytest.mark.parametrize('window', [('escan', EScanWindow), ('qscan', QScanWindow)],
-                             indirect=True)
-    def test_a_stale_result_is_discarded(self, window):
-        """A result computed from superseded settings must not overwrite the current ones."""
-        runner = window._resolution_runner
-        # Pretend a newer request happened while the older one was in flight.
-        window.load_instrument()
-        stale_generation = window._generation
-        window._generation += 1
-        runner._handle_result((stale_generation, np.array([1.0]), np.zeros((1, 4, 4))))
-        # The stale result was ignored, so the instrument still has real data.
-        _settle(window)
-        assert np.all(np.isfinite(window.instrument.RMS))
 
     def test_a_worker_exception_reaches_the_gui_thread(self, qapp):
         """An exception on the worker must not vanish (it used to be swallowed)."""
@@ -220,92 +136,36 @@ class TestConstruction:
 
 
 class TestClearLayout:
-    @pytest.mark.parametrize('window', WINDOWS, indirect=True)
-    def test_widgets_and_non_widget_items_are_both_handled(self, window):
+    def test_widgets_and_non_widget_items_are_both_handled(self, qapp):
         """A spacer has widget() is None; the old code raised AttributeError on it."""
         from qtpy.QtWidgets import QVBoxLayout
-        layout = QVBoxLayout()
-        widget = QWidget()
-        layout.addWidget(widget)
-        layout.addStretch(1)          # a QSpacerItem: no widget(), no deleteLater()
-        assert layout.count() == 2
 
-        window.clearLayout(layout)
-        assert layout.count() == 0
-
-    @pytest.mark.parametrize('window', WINDOWS, indirect=True)
-    def test_clearing_an_empty_layout_is_a_no_op(self, window):
-        from qtpy.QtWidgets import QVBoxLayout
-        layout = QVBoxLayout()
-        window.clearLayout(layout)
-        assert layout.count() == 0
-
-
-class TestButtonWiring:
-    @pytest.mark.parametrize('window', [('escan', EScanWindow), ('qscan', QScanWindow)],
-                             indirect=True)
-    def test_button_action_does_not_fire_on_press_alone(self, window):
-        """`pressed` fires on mouse-down; `clicked` only on a completed click.
-
-        PySide6's receivers() does not count bound-method slots, so this is checked
-        behaviourally: pressing and then releasing *outside* the button must not
-        trigger the handler -- which is exactly what `pressed` would have done.
-        """
-        from qtpy.QtCore import QEvent, QPointF, Qt
-        from qtpy.QtGui import QMouseEvent
-
-        for name in ('fit_btn_fit', 'fit_btn_init'):
-            button = getattr(window, name, None)
-            if button is None:
-                continue
-            # Probe only `clicked` -- the signal the handler is now wired to. A slot
-            # connected to `pressed` would fire here; one connected to `clicked`
-            # must not.
-            from qtpy.QtCore import QPoint, Qt
-            from qtpy.QtTest import QTest
-
-            fired = []
-            probe = lambda: fired.append(name)      # noqa: E731
-            button.clicked.connect(probe)
-            try:
-                button.show()
-                QApplication.processEvents()
-                QTest.mousePress(button, Qt.LeftButton, pos=QPoint(2, 2))
-                assert fired == [], 'the action fired on mouse-down (%s)' % name
-                # Release outside the button: an aborted click, still not a click.
-                QTest.mouseRelease(button, Qt.LeftButton, pos=QPoint(900, 900))
-                assert fired == [], 'the action fired on an aborted click (%s)' % name
-            finally:
-                button.clicked.disconnect(probe)
-                button.hide()
-
-    @pytest.mark.parametrize('window', [('escan', EScanWindow), ('qscan', QScanWindow)],
-                             indirect=True)
-    def test_button_action_does_fire_on_a_real_click(self, window):
-        button = getattr(window, 'fit_btn_init', None)
-        if button is None:
-            pytest.skip('no init button on this window')
-        fired = []
-        probe = lambda: fired.append(1)             # noqa: E731
-        button.clicked.connect(probe)
+        window = UnifiedFitWindow()
         try:
-            button.click()
-            assert fired, 'a real click did not reach the handler'
+            layout = QVBoxLayout()
+            widget = QWidget()
+            layout.addWidget(widget)
+            layout.addStretch(1)          # a QSpacerItem: no widget(), no deleteLater()
+            assert layout.count() == 2
+
+            window.clearLayout(layout)
+            assert layout.count() == 0
         finally:
-            button.clicked.disconnect(probe)
+            window.close()
+
+    def test_clearing_an_empty_layout_is_a_no_op(self, qapp):
+        from qtpy.QtWidgets import QVBoxLayout
+
+        window = UnifiedFitWindow()
+        try:
+            layout = QVBoxLayout()
+            window.clearLayout(layout)
+            assert layout.count() == 0
+        finally:
+            window.close()
 
 
 class TestProjectionCanvases:
-    @pytest.mark.parametrize('window', WINDOWS, indirect=True)
-    def test_qslice_is_validated(self, window):
-        """ResolutionPlotProj expects QxE/QyE/QxQy; anything else must be rejected."""
-        from inspy.gui.gui_convfit_escan_uf import MyMplCanvas as ECanvas
-
-        with pytest.raises(ValueError):
-            ECanvas(qslice='QxW')     # the old, wrong spelling
-        for good in ('QxE', 'QyE', 'QxQy'):
-            assert ECanvas(qslice=good) is not None
-
     @pytest.mark.parametrize('window', WINDOWS, indirect=True)
     def test_replacing_the_canvases_does_not_accumulate_widgets(self, window):
         """clearLayout + rebuild must leave the layout with exactly the new widgets."""
@@ -319,16 +179,381 @@ class TestProjectionCanvases:
 
 
 class TestDataLoading:
-    def test_fitting_without_data_raises_a_clear_error(self, qapp):
-        """Slicing a list (or None) used to produce a bare TypeError."""
-        win = EScanWindow()
-        win.load_instrument()
+    def test_unified_export_controls_are_visible_in_requested_positions(
+            self, qapp):
+        window = UnifiedFitWindow()
+        try:
+            assert window.import_config_button.parentWidget().objectName() == (
+                'centralwidget')
+            assert window.export_config_button.parentWidget().objectName() == (
+                'centralwidget')
+            assert (window.instr_dropdown.geometry().right()
+                    < window.import_config_button.geometry().left())
+            assert (window.import_config_button.geometry().right()
+                    < window.export_config_button.geometry().left())
+            assert window.export_fit_csv_button.parentWidget().objectName() == (
+                'groupBox_8')
+            assert (window.export_fit_csv_button.geometry().top()
+                    >= window.fit_output_text.geometry().bottom())
+            assert (window.export_fit_csv_button.geometry().bottom()
+                    < window.frame.geometry().top())
+        finally:
+            window.close()
+
+    def test_unified_scan_detection_uses_absolute_axis_tolerances(self):
+        from inspy.gui.gui_convfit_uf import _detect_scan_axes
+
+        assert _detect_scan_axes(
+            [1.0, 1.004], [2, 2], [3, 3], [1, 1.049]) == []
+        assert _detect_scan_axes(
+            [1.0, 1.006], [2.0, 2.005], [3, 3], [1, 1.051]) == [
+                'QH', 'W']
+        assert _detect_scan_axes(
+            [1, 1], [2, 2.006], [3, 3], [1, 1]) == ['QK']
+
+    def test_unified_q_model_uses_first_varying_axis(self):
+        from types import SimpleNamespace
+        from inspy.gui.gui_convfit_uf import MainWindow as UnifiedFitWindow
+        from inspy.gui.tools import SqwQScanTwoPeaks
+
+        h = np.array([1.0, 1.1])
+        k = np.array([2.0, 2.2])
+        l = np.array([3.0, 3.0])
+        w = np.array([1.0, 1.0])
+        params = np.array([2.1, 3.2, 0.8, 0.1, 0.2, 10.0, 0.0, 2.0])
+        window = SimpleNamespace(scan_axis='QH')
+
+        actual = UnifiedFitWindow._sqw_for_scan_axis(
+            window, h, k, l, w, params)
+        expected = SqwQScanTwoPeaks(h, k, l, w, params)
+        assert np.allclose(actual, expected)
+
+    @pytest.mark.parametrize(
+        'scan_mode,scan_axis,expected_width_label,expected_summary',
+        [('energy', None, 'HWHM1:', 'current energy scan is fitted'),
+         ('q', 'QK', 'FWHM1:', 'current QK scan is fitted')])
+    def test_unified_fit_uses_matching_model_and_width_convention(
+            self, qapp, monkeypatch, scan_mode, scan_axis,
+            expected_width_label, expected_summary):
+        from types import SimpleNamespace
+        import inspy.gui.gui_convfit_uf as fit_module
+        from inspy.gui.gui_convfit_uf import MyDataCanvas
+        from inspy.gui.tools import SqwDemo
+
+        calls = {}
+
+        class FakeFitter:
+            def __init__(self, instrument, model, prefactor, hkle, observed, errors):
+                calls['model'] = model
+
+            def fit_ultrafast(self, **kwargs):
+                return {
+                    'params': np.array([1.0, 2.0, 0.8, 0.1, 0.2, 10.0, 0.0, 2.0]),
+                    'param_errors': np.ones(8) * 0.01,
+                }
+
+        def fake_resconv(**kwargs):
+            calls['plot_model'] = kwargs['sqw']
+            return np.ones(101)
+
+        monkeypatch.setattr(fit_module, 'UltraFastFitConv', FakeFitter)
+        window = UnifiedFitWindow()
+        try:
+            assert window.height() == 721
+            window.scan_mode = scan_mode
+            window.scan_axis = scan_axis
+            window.data = np.array([
+                [1.0, 1.1, 1.2],
+                [2.0, 2.1, 2.2],
+                [3.0, 3.0, 3.0],
+                [1.0, 1.0, 1.0],
+                [10.0, 8.0, 6.0],
+                np.sqrt([10.0, 8.0, 6.0]),
+            ])
+            window.data_end = 3
+            window.load_instrument = lambda: True
+            window.instrument = SimpleNamespace(ResConv=fake_resconv)
+            window.chkMagFF.setChecked(False)
+            window.dplot = MyDataCanvas(window.fit_data_plot)
+
+            window.fitData()
+
+            expected_model = SqwDemo if scan_mode == 'energy' else window._sqw_for_scan_axis
+            assert calls['model'] == expected_model
+            assert calls['plot_model'] == expected_model
+            output = window.fit_output_text.toPlainText()
+            assert expected_width_label in output
+            assert expected_summary in output
+            if scan_mode == 'energy':
+                assert 'The fitted results are:' in output
+            assert window._last_fit_export['experimental'].shape == (5, 3)
+            assert window._last_fit_export['fitted'].shape == (5, 101)
+        finally:
+            window.close()
+
+    def test_unified_instrument_configuration_json_round_trip(
+            self, qapp, tmp_path, monkeypatch):
+        import json
+        import inspy.gui.gui_convfit_uf as fit_module
+
+        config_path = tmp_path / 'instrument.json'
+        monkeypatch.setattr(
+            fit_module.QFileDialog, 'getSaveFileName',
+            lambda *args: (str(config_path), ''))
+        window = UnifiedFitWindow()
+        try:
+            window.instr_dropdown.setCurrentText('TAIPAN')
+            window.exportInstrumentConfig()
+
+            config = json.loads(config_path.read_text(encoding='utf-8'))
+            assert config['format'] == 'inspy-conv-instrument-config'
+            assert config['version'] == 1
+            assert config['controls']['instr_dropdown'] == 'TAIPAN'
+            assert config['controls']['energy_input'] == '14.87'
+            assert config['controls']['arms_input'] == '202, 196, 179, 65, 106'
+
+            window.instr_dropdown.setCurrentText('SIKA')
+            monkeypatch.setattr(
+                fit_module.QFileDialog, 'getOpenFileName',
+                lambda *args: (str(config_path), ''))
+            window.load_instrument = lambda: True
+            window.importInstrumentConfig()
+            assert window.instr_dropdown.currentText() == 'TAIPAN'
+            assert window.energy_input.text() == '14.87'
+            assert window.arms_input.text() == '202, 196, 179, 65, 106'
+        finally:
+            window.close()
+
+    def test_unified_fit_csv_has_comments_and_aligned_columns(
+            self, qapp, tmp_path, monkeypatch):
+        import csv
+        import inspy.gui.gui_convfit_uf as fit_module
+
+        csv_path = tmp_path / 'fit.csv'
+        monkeypatch.setattr(
+            fit_module.QFileDialog, 'getSaveFileName',
+            lambda *args: (str(csv_path), ''))
+        window = UnifiedFitWindow()
+        try:
+            window._last_fit_export = {
+                'parameters': (
+                    'The current energy scan is fitted by using\n'
+                    'the SqwDemo S(Q, w) function with UltraFastFitConv.\n'
+                    'The fitted results are:\n'
+                    'Fitted parameter: 1.25 +/- 0.05'),
+                'experimental': np.array([
+                    [1.0, 1.1], [2.0, 2.1], [3.0, 3.0],
+                    [4.0, 4.1], [10.0, 8.0],
+                ]),
+                'fitted': np.array([
+                    [1.0, 1.05, 1.1], [2.0, 2.05, 2.1],
+                    [3.0, 3.0, 3.0], [4.0, 4.05, 4.1],
+                    [9.5, 9.0, 8.5],
+                ]),
+            }
+            window.exportFitCsv()
+
+            with csv_path.open(encoding='utf-8', newline='') as csv_file:
+                text = csv_file.read()
+            lines = text.splitlines()
+            assert lines[:4] == [
+                '# The current energy scan is fitted by using',
+                '# the SqwDemo S(Q, w) function with UltraFastFitConv.',
+                '# The fitted results are:',
+                '# Fitted parameter: 1.25 +/- 0.05',
+            ]
+            assert '"' not in text
+            assert len(set(
+                [index for index, character in enumerate(lines[4])
+                 if character == ','])) == 9
+            assert [index for index, character in enumerate(lines[4])
+                    if character == ','] == [
+                index for index, character in enumerate(lines[5])
+                if character == ',']
+
+            rows = list(csv.reader(lines[4:], skipinitialspace=True))
+            assert [value.strip() for value in rows[0]] == [
+                'H', 'K', 'L', 'W', 'Intensity',
+                'newH', 'newK', 'newL', 'newW', 'fitted_Intensity',
+            ]
+            assert len(rows[3]) == 10
+            assert [value.strip() for value in rows[1][:5]] == [
+                '1', '2', '3', '4', '10']
+            assert [value.strip() for value in rows[1][5:]] == [
+                '1', '2', '3', '4', '9.5']
+            assert [value.strip() for value in rows[3][:5]] == [
+                '', '', '', '', '']
+            assert [value.strip() for value in rows[3][5:]] == [
+                '1.1', '2.1', '3', '4.1', '8.5']
+        finally:
+            window.close()
+
+    def test_unified_load_prompts_when_multiple_axes_vary(
+            self, qapp, tmp_path, monkeypatch):
+        from qtpy.QtWidgets import QDialog, QMessageBox
+        import inspy.gui.gui_convfit_uf as fit_module
+
+        h = np.array([1.0, 1.1, 1.2])
+        k = np.array([2.0, 2.1, 2.2])
+        l = np.array([3.0, 3.0, 3.0])
+        w = np.array([1.0, 1.0, 1.0])
+        intensity = np.array([10.0, 8.0, 6.0])
+        loaded = (h, k, l, w, intensity, np.sqrt(intensity))
+        filename = tmp_path / 'q-scan.txt'
+        filename.write_text('data')
+
+        class FakeImportDialog:
+            result_data = loaded
+
+            def __init__(self, *args):
+                pass
+
+            def exec_(self):
+                return QDialog.Accepted
+
+        monkeypatch.setattr(
+            fit_module.QFileDialog, 'getOpenFileName',
+            lambda *args: (str(filename), ''))
+        monkeypatch.setattr(fit_module, 'HKLWImportDialog', FakeImportDialog)
+        warnings = []
+        prompts = []
+        monkeypatch.setattr(
+            QMessageBox, 'warning',
+            lambda parent, title, message: warnings.append((title, message)))
+        monkeypatch.setattr(
+            fit_module.QInputDialog, 'getItem',
+            lambda parent, title, label, items, current, editable:
+            (prompts.extend(items) or 'QK', True))
+
+        window = UnifiedFitWindow()
+        try:
+            window.loadData()
+            assert warnings and warnings[0][0] == 'Multiple scan axes detected'
+            assert prompts == ['QH', 'QK']
+            assert window.scan_mode == 'q'
+            assert window.scan_axis == 'QK'
+            assert window.label.text() == 'Q1:'
+            assert np.allclose(window.dplot.axes.lines[0].get_xdata(), k)
+            assert window.dplot.axes.get_xlabel() == 'QK [rlu]'
+            assert window.data.shape == (6, 3)
+        finally:
+            window.close()
+
+    def test_unified_load_selects_energy_model(self, qapp, tmp_path, monkeypatch):
+        from qtpy.QtWidgets import QDialog
+        import inspy.gui.gui_convfit_uf as fit_module
+
+        h = np.array([1.0, 1.0, 1.0])
+        k = np.array([0.0, 0.0, 0.0])
+        l = np.array([0.0, 0.0, 0.0])
+        w = np.array([1.0, 2.0, 3.0])
+        intensity = np.array([10.0, 8.0, 6.0])
+        loaded = (h, k, l, w, intensity, np.sqrt(intensity))
+        filename = tmp_path / 'energy-scan.txt'
+        filename.write_text('data')
+
+        class FakeImportDialog:
+            result_data = loaded
+
+            def __init__(self, *args):
+                pass
+
+            def exec_(self):
+                return QDialog.Accepted
+
+        monkeypatch.setattr(
+            fit_module.QFileDialog, 'getOpenFileName',
+            lambda *args: (str(filename), ''))
+        monkeypatch.setattr(fit_module, 'HKLWImportDialog', FakeImportDialog)
+
+        window = UnifiedFitWindow()
+        try:
+            window.loadData()
+            assert window.scan_mode == 'energy'
+            assert window.scan_axis is None
+            assert window.label.text() == 'En1:'
+            assert np.allclose(window.dplot.axes.lines[0].get_xdata(), w)
+            assert window.dplot.axes.get_xlabel() == 'Energy [meV]'
+        finally:
+            window.close()
+
+    def test_unified_load_prompts_when_energy_and_hkl_both_vary(
+            self, qapp, tmp_path, monkeypatch):
+        from qtpy.QtWidgets import QDialog, QMessageBox
+        import inspy.gui.gui_convfit_uf as fit_module
+
+        filename = tmp_path / 'mixed-scan.txt'
+        filename.write_text('data')
+        intensity = np.array([10.0, 8.0])
+        loaded = (
+            np.array([1.0, 1.1]), np.array([0.0, 0.0]), np.array([0.0, 0.0]),
+            np.array([1.0, 2.0]), intensity, np.sqrt(intensity))
+
+        class FakeImportDialog:
+            result_data = loaded
+
+            def __init__(self, *args):
+                pass
+
+            def exec_(self):
+                return QDialog.Accepted
+
+        monkeypatch.setattr(
+            fit_module.QFileDialog, 'getOpenFileName',
+            lambda *args: (str(filename), ''))
+        monkeypatch.setattr(fit_module, 'HKLWImportDialog', FakeImportDialog)
+        warnings = []
+        prompts = []
+        monkeypatch.setattr(
+            QMessageBox, 'warning',
+            lambda parent, title, message: warnings.append((title, message)))
+        monkeypatch.setattr(
+            fit_module.QInputDialog, 'getItem',
+            lambda parent, title, label, items, current, editable:
+            (prompts.extend(items) or 'W', True))
+
+        window = UnifiedFitWindow()
+        try:
+            window.loadData()
+            assert warnings and warnings[0][0] == 'Multiple scan axes detected'
+            assert prompts == ['QH', 'W']
+            assert window.scan_mode == 'energy'
+            assert window.scan_axis is None
+            assert np.allclose(window.dplot.axes.lines[0].get_xdata(), loaded[3])
+        finally:
+            window.close()
+
+    def test_configurable_hklw_import(self, tmp_path):
+        from inspy.gui.tools import _load_hklw
+
+        custom = tmp_path / 'custom.dat'
+        custom.write_text(
+            'scan title\n'
+            'H|K|L|W|Iobs|extra\n'
+            '1|0|0|2|10|999\n'
+            '1|0|0|3|8|999\n')
+
+        loaded = _load_hklw(
+            str(custom), skip_lines=2, delimiter='|',
+            h_col=0, k_col=1, l_col=2, w_col=3, i_col=4)
+        assert len(loaded) == 6
+        assert np.allclose(loaded[3], [2, 3])
+        assert np.allclose(loaded[4], [10, 8])
+        assert np.allclose(loaded[5], np.sqrt([10, 8]))
+
+    def test_unified_fitting_without_data_shows_a_clear_warning(
+            self, qapp, monkeypatch):
+        from qtpy.QtWidgets import QMessageBox
+
+        warnings = []
+        monkeypatch.setattr(
+            QMessageBox, 'warning',
+            lambda parent, title, message: warnings.append((title, message)))
+        win = UnifiedFitWindow()
         try:
             win.fitData()
-        except Exception as exc:
-            assert 'data' in str(exc).lower(), str(exc)
-        else:
-            pytest.fail('fitting with no data did not raise')
+            assert warnings and warnings[0][0] == 'No data'
+            assert 'load a scan data file' in warnings[0][1].lower()
         finally:
             win.close()
 
@@ -367,3 +592,45 @@ class TestDataLoading:
         # A named mask gives a better message about which one is wrong.
         with pytest.raises(ValueError, match='fixed mask'):
             _parse_param_fixed('1 0', 3, name='fixed mask')
+
+    def test_curvature_radius_uses_cm_and_accepts_flat_values(self):
+        from inspy.gui.tools import _parse_curvature_radius
+
+        assert _parse_curvature_radius('39.5', 'Analyzer horizontal') == 39.5
+        assert np.isinf(_parse_curvature_radius('None', 'Analyzer horizontal'))
+        assert np.isinf(_parse_curvature_radius('flat', 'Analyzer horizontal'))
+        for invalid in ('0', '-1', 'radius'):
+            with pytest.raises(ValueError, match='cm'):
+                _parse_curvature_radius(invalid, 'Analyzer horizontal')
+
+    def test_qscan_axis_detection_handles_multidimensional_and_small_scans(self):
+        from inspy.gui.tools import _detect_qscan_axes
+
+        axes = _detect_qscan_axes(
+            [1.0, 1.001, 1.0, 1.001],
+            [0.0, 0.0, 0.01, 0.01],
+            [2.0, 2.0, 2.0, 2.0])
+        assert axes == ['QH', 'QK']
+        assert _detect_qscan_axes([1, 1], [2, 2], [3, 3]) == []
+
+    @pytest.mark.parametrize(
+        'field_name,value,message_part',
+        [
+            ('fit_param_fixed', '1 1 typo 0 0 0 0 0', 'parameter fixed mask'),
+            ('mono_hcurve_input', '0', 'cm'),
+        ])
+    def test_invalid_mask_and_curvature_show_a_warning(
+            self, qapp, monkeypatch, field_name, value, message_part):
+        from qtpy.QtWidgets import QMessageBox
+
+        win = UnifiedFitWindow()
+        messages = []
+        monkeypatch.setattr(
+            QMessageBox, 'warning',
+            lambda parent, title, message: messages.append(message))
+        try:
+            getattr(win, field_name).setText(value)
+            assert win.load_instrument() is False
+            assert messages and message_part in messages[0]
+        finally:
+            win.close()
